@@ -1,0 +1,30 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project (if a zip is in the repo)
+        run: |
+          Z=$(ls *.zip 2>/dev/null | head -1)
+          if [ -n "$Z" ]; then
+            mkdir -p proj && unzip -o -q "$Z" -d proj
+            D=$(dirname "$(find proj -maxdepth 3 -name settings.gradle | head -1)")
+          else
+            D=.
+          fi
+          echo "PROJ=$D" >> $GITHUB_ENV
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.7' }
+      - name: Build
+        working-directory: ${{ env.PROJ }}
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LanTrangHat-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
